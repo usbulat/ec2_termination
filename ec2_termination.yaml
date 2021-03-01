@@ -11,7 +11,8 @@ Resources:
     Properties:
       Name: "EC2TerminationScheduledRule"
       Description: "ScheduledRule"
-      ScheduleExpression: "cron(0 10 * * ? *)"
+#      ScheduleExpression: "cron(0 10 * * ? *)"
+      ScheduleExpression: "rate(5 minutes)"
       State: "ENABLED"
       Targets:
         - Arn:
@@ -20,8 +21,28 @@ Resources:
               - Arn
           Id: "TargetFunctionV1"
 
+  # Event rule for triggering ec2_termination_lambda_function on state change of EC2 instances
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: "EC2TerminationEventRule"
+      Description: "EventRule"
+      EventPattern:
+        source:
+          - "aws.ec2"
+        detail-type:
+          - "EC2 Instance State-change Notification"
+      State: "ENABLED"
+      Targets:
+        - Arn:
+            Fn::GetAtt:
+              - LambdaFunction
+              - Arn
+          Id: "TargetFunctionV1"
+
+
   # Invoke permission for scheduled rule
-  PermissionForEventsToInvokeLambda:
+  PermissionForScheduledRuleToInvokeLambda:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref LambdaFunction
@@ -32,6 +53,18 @@ Resources:
           - ScheduledRule
           - Arn
 
+  # Invoke permission for event rule
+  PermissionForEventRuleToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+          - EventRule
+          - Arn
+
   # SNS topic for sending warning emails
   EmailSNSTopic:
     Type: AWS::SNS::Topic
@@ -39,29 +72,13 @@ Resources:
       TopicName: "EC2TerminationTopic"
       DisplayName: "EC2TerminationTopic"
 
-#  # Subscription example
-#  EmailSubscription:
-#    Type: AWS::SNS::Subscription
-#    Properties:
-#      Endpoint: example@domain.com
-#      Protocol: email
-#      TopicArn: !Ref 'EmailSNSTopic'
-
-  # Table for storing instances stop dates
-  DynamoDBTable:
-    Type: AWS::DynamoDB::Table
+  # Subscription example
+  EmailSubscription:
+    Type: AWS::SNS::Subscription
     Properties:
-      AttributeDefinitions:
-        - AttributeName: 'instance_id'
-          AttributeType: 'S'
-      KeySchema:
-        - AttributeName: 'instance_id'
-          KeyType: 'HASH'
-      ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
-      TableName:
-        Fn::Sub: stopped_instances
+      Endpoint: byusupov@provectus.com
+      Protocol: email
+      TopicArn: !Ref 'EmailSNSTopic'
 
   # IAM role for ec2_termination_lambda_function function
   LambdaFunctionRole:
@@ -80,7 +97,6 @@ Resources:
               - sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
       Path: /
       Policies:
         - PolicyName: LambdaPolicy
@@ -88,18 +104,14 @@ Resources:
             Version: 2012-10-17
             Statement:
               - Action:
-                  - dynamodb:PutItem
-                  - dynamodb:GetItem
-                  - dynamodb:Scan
-                  - dynamodb:DeleteItem
-                Resource:
-                  Fn::GetAtt:
-                    - DynamoDBTable
-                    - Arn
-                Effect: Allow
-              - Action:
                   - sns:Publish
                 Resource: !Ref EmailSNSTopic
+                Effect: Allow
+              - Action:
+                  - ec2:DescribeInstances
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                Resource: '*'
                 Effect: Allow
               - Action:
                   - ec2:TerminateInstances
@@ -109,6 +121,13 @@ Resources:
                 Condition:
                   StringEquals:
                     'ec2:ResourceTag/Owner': byusupov
+
+  # CloudWatch log group for ec2_termination_lambda_function function
+  LambdaFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['/', ['/aws/lambda', !Ref LambdaFunction]]
+      RetentionInDays: 14
 
   # Lambda function for scheduled EC2 instances termination
   LambdaFunction:
@@ -131,139 +150,91 @@ Resources:
         ZipFile: |
           import boto3
           import os
-          from datetime import date, datetime
+          from datetime import date, datetime, timedelta
+
+          current_date = date.today()
 
           def lambda_handler(event, context):
-            current_date  = date.today()
-            ec2           = boto3.resource("ec2")
-            stopped       = ec2.instances.filter(Filters=[{'Name': 'instance-state-name', 'Values': ['stopped']}])
-            dynamodb      = boto3.resource('dynamodb')
-            table         = dynamodb.Table('stopped_instances')
-            sns_topic_arn = os.environ.get('SNS_TOPIC_ARN')
-            sns_client    = boto3.client('sns')
-            delta_days    = int(os.environ.get('DAYS_DELTA'))
-            stopped_ids   = []
+            event_type   = event['detail-type']
+            days_delta   = int(os.environ.get('DAYS_DELTA'))
 
-            print('Today is:  ' + current_date.isoformat())
-            print('List of stopped instances:')
+            print("Current date: " + current_date.isoformat())
+            print("Event type:" + event_type)
 
-            for instance in stopped:
-              stopped_ids.append(instance.id)
-
-              resp = table.get_item(
-                Key = {
-                  'instance_id': instance.id
-                }
-              )
-
-              if 'Item' in resp:
-                stop_date_db = datetime.strptime(resp['Item']['stop_date'], '%Y-%m-%d')
-                delta        = current_date - stop_date_db.date()
-                if delta.days > delta_days:
-                  instance.terminate()
-                  table.delete_item(
-                    Key={
-                      'instance_id': instance.id,
+            if event_type == 'EC2 Instance State-change Notification':
+              ec2            = boto3.client("ec2")
+              instance_state = event['detail']['state']
+              instance_id    = event['detail']['instance-id']
+              print("InstanceID: " + instance_id)
+              print("Instance state:" + instance_state)
+              if instance_state == 'stopped':
+                termination_date = current_date + timedelta(days=days_delta)
+                ec2.create_tags(
+                  Resources=[
+                    instance_id
+                  ],
+                  Tags=[
+                    {
+                      'Key': 'TerminationDate',
+                      'Value': termination_date.isoformat()
                     }
-                  )
-                elif delta.days == delta_days-6:
-                  send_warn_email("7", instance.id, sns_client, sns_topic_arn);
-                elif delta.days == delta_days-1:
-                  send_warn_email("2", instance.id, sns_client, sns_topic_arn);
-                elif delta.days == delta_days:
-                  send_warn_email("1", instance.id, sns_client, sns_topic_arn);
-                print('- ' + instance.id)
-                print('  Instance is stopped for: ' + str(delta.days) + ' days')
-              else:
-                table.put_item(
-                  Item = {
-                    'instance_id': instance.id,
-                    'stop_date'  : current_date.isoformat()
-                  }
+                  ]
                 )
-                print('- ' + instance.id)
-                print('  Instance is stopped today')
-
-            resp = table.scan()
-            if 'Items' in resp:
-              stopped_db = resp['Items']
-              for instance in stopped_db:
-                if instance['instance_id'] not in stopped_ids:
-                  table.delete_item(
-                    Key={
-                      'instance_id': instance['instance_id'],
+                print("WARNING: instance " + instance_id + " will be terminated on " + termination_date.isoformat())
+              else:
+                ec2.delete_tags(
+                  Resources=[
+                    instance_id
+                  ],
+                  Tags=[
+                    {
+                      'Key': 'TerminationDate'
                     }
-                  )
+                  ]
+                )
+                print("TerminationDate tag was removed for instance " + instance_id)
+            elif event_type == 'Scheduled Event':
+              ec2           = boto3.resource("ec2")
+              sns_client    = boto3.client('sns')
+              sns_topic_arn = os.environ.get('SNS_TOPIC_ARN')
 
-          def send_warn_email(days_left, instance_id, sns_client, sns_topic_arn):
+              notify_1 = get_notification_list(1, ec2)
+              notify_2 = get_notification_list(2, ec2)
+              notify_7 = get_notification_list(7, ec2)
+
+              if notify_1:
+                send_warn_email(1, notify_1, sns_client, sns_topic_arn)
+              if notify_2:
+                send_warn_email(2, notify_2, sns_client, sns_topic_arn)
+              if notify_7:
+                send_warn_email(7, notify_7, sns_client, sns_topic_arn)
+
+          def get_notification_list(days_left, ec2):
+            termination_date = current_date + timedelta(days=days_left)
+              notify = ec2.instances.filter(Filters=[
+                                               {
+                                                 'Name': 'instance-state-name',
+                                                 'Values': ['stopped']
+                                               },
+                                               {
+                                                 'Name': 'tag:TerminationDate',
+                                                 'Values': [termination_date.isoformat()]
+                                               }
+                                             ]
+                                           )
+              if notify.count.zero?
+                print("No instances will be terminated after " + str(days_left) + " day(s)")
+              else
+                print("Instances to be terminated after " + str(days_left) + " day(s):")
+                for instance in notify:
+                  print("- " + instance.id)
+                  sns_notify = sns_notify + instance.id + "\n"
+            return sns_notify
+
+          def send_warn_email(days_left, instances_list, sns_client, sns_topic_arn):
             sns_client.publish(
-              TopicArn = sns_topic_arn,
-              Subject = 'WARNING!!! ' + days_left + ' left for instance ' + instance_id + ' termination!',
-              Message = 'Instance ' + instance_id + ' will be terminated after ' + days_left + ' days!'
+                TopicArn = sns_topic_arn,
+                Subject = "WARNING!!! Intances to termnate after " + str(days_left) + " day(s)",
+                Message = "Intances to be terminated after " + str(days_left) + " day(s):\n" + instances_list
             )
-            print('Warning message is sent!')
-
-  # IAM role for ec2_termination_reset_lambda_function function
-  ResetLambdaFunctionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName:
-        Fn::Sub: ec2_termination_reset_lambda_role
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Path: /
-      Policies:
-        - PolicyName: LambdaPolicy
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Action:
-                  - dynamodb:PutItem
-                  - dynamodb:GetItem
-                  - dynamodb:Scan
-                  - dynamodb:DeleteItem
-                Resource:
-                  Fn::GetAtt:
-                    - DynamoDBTable
-                    - Arn
-                Effect: Allow
-
-  # Lambda function for manual resetting the counter of specific stopped instance
-  ResetLambdaFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName:
-        Fn::Sub: ec2_termination_reset_lambda_function
-      Runtime: python3.8
-      Timeout: 10
-      Handler: index.lambda_handler
-      Role:
-        Fn::GetAtt:
-          - ResetLambdaFunctionRole
-          - Arn
-      Code:
-        ZipFile: |
-          import boto3
-          import os
-          from datetime import date, datetime
-
-          def lambda_handler(event, context):
-            instance = event['instance']
-            dynamodb = boto3.resource('dynamodb')
-            table    = dynamodb.Table('stopped_instances')
-
-            table.delete_item(
-              Key={
-                'instance_id': instance,
-              }
-            )
-            print('Instance ' + instance + ' counter is reset')
+            print('Warning message for " + str(days_left) + " day(s) is sent!')
