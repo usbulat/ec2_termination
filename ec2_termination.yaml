@@ -159,7 +159,7 @@ Resources:
                       )
                     else:
                       termination_date = termination_date_tag
-                    print("Instance " + instance_id + " will be terminated on " + termination_date.isoformat() + "\n")
+                    print("Instance " + instance_id + " will be terminated on " + termination_date.isoformat())
 
                     if current_date == termination_date - timedelta(days=1):
                       send_warn_email(1, termination_date, instance_id)
@@ -173,7 +173,7 @@ Resources:
                           instance_id
                         ]
                       )
-                      print("Instance " + instance_id + " is terminated!\n")
+                      print("Instance " + instance_id + " is terminated")
                   elif termination_date_tag:
                     ec2.delete_tags(
                       Resources=[
@@ -185,7 +185,8 @@ Resources:
                         }
                       ]
                     )
-                    print("TerminationDate tag was removed for instance " + instance_id + "\n")
+                    print("TerminationDate tag was removed for instance " + instance_id)
+                  print("\n")
 
           def send_warn_email(days_left, termination_date, instance_id):
             sns_topic_arn = os.environ.get('SNS_TOPIC_ARN')
@@ -196,4 +197,4 @@ Resources:
                 Message  = "Intance " + instance_id + " will be termnated after " + str(days_left) + " day(s)\n" +
                            "Termination date: " + termination_date.isoformat()
             )
-            print("Warning message for instance " + instance_id + " is sent!\n")
+            print("Warning message for instance " + instance_id + " is sent")
