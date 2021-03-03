@@ -83,10 +83,10 @@ Resources:
                   - ec2:TerminateInstances
                 Resource: '*'
                 Effect: Allow
-                # TODO: remove or modify condition
                 Condition:
-                  StringEquals:
-                    'ec2:ResourceTag/Owner': byusupov
+                  ForAllValues:StringEquals:
+                    'ec2:ResourceTag': TerminationDate
+                    #TODO check this!!!!!!!!!
 
   # CloudWatch log group for ec2_termination_lambda_function function
   LambdaFunctionLogGroup:
