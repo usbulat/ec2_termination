@@ -5,17 +5,11 @@ It also creates Lambda function for restarting the termination counter manually.
 
 * Deployment of CloudFormation stack:
 ```
-aws cloudformation create-stack \
---stack-name ec2_termination_stack \
---template-body file://ec2_termination.yaml \
---capabilities CAPABILITY_NAMED_IAM
+bash stack_deploy.sh
 ```
 * Updating the stack:
 ```
-aws cloudformation update-stack \
---stack-name ec2_termination_stack \
---template-body file://ec2_termination.yaml \
---capabilities CAPABILITY_NAMED_IAM
+bash stack_update.sh
 ```
 * Deleting the stack:
 ```
