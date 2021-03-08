@@ -1,0 +1,126 @@
+{
+  "AmiLaunchIndex": 0,
+  "ImageId": "ami-xxxxxxxxxxxxxxxxx",
+  "InstanceId": "i-xxxxxxxxxxxxxxxxx",
+  "InstanceType": "t2.micro",
+  "KeyName": "xxxxxxxxx_key",
+  "LaunchTime": "2021-03-08 12:42:39",
+  "Monitoring": {
+    "State": "disabled"
+  },
+  "Placement": {
+    "AvailabilityZone": "xx-xxxx-xx",
+    "GroupName": "",
+    "Tenancy": "default"
+  },
+  "PrivateDnsName": "ip-xxx-xxx-xxx-xxx.xx-xxxx-x.compute.internal",
+  "PrivateIpAddress": "xxx.xxx.xxx.xxx",
+  "ProductCodes": [
+
+  ],
+  "PublicDnsName": "",
+  "State": {
+    "Code": 80,
+    "Name": "stopped"
+  },
+  "StateTransitionReason": "User initiated (2021-03-08 12:44:38 GMT)",
+  "SubnetId": "subnet-xxxxxxxx",
+  "VpcId": "vpc-xxxxxxxx",
+  "Architecture": "x86_64",
+  "BlockDeviceMappings": [
+    {
+      "DeviceName": "/dev/sda1",
+      "Ebs": {
+        "AttachTime": "2021-03-08 12:42:40",
+        "DeleteOnTermination": "True",
+        "Status": "attached",
+        "VolumeId": "vol-xxxxxxxxxxxxxxxxx"
+      }
+    }
+  ],
+  "ClientToken": "",
+  "EbsOptimized": "False",
+  "EnaSupport": "True",
+  "Hypervisor": "xen",
+  "NetworkInterfaces": [
+    {
+      "Attachment": {
+        "AttachTime": "2021-03-08 12:42:39",
+        "AttachmentId": "eni-attach-xxxxxxxxxxxxxxxxx",
+        "DeleteOnTermination": "True",
+        "DeviceIndex": 0,
+        "Status": "attached"
+      },
+      "Description": "",
+      "Groups": [
+        {
+          "GroupName": "xxxxxxxxx_ssh",
+          "GroupId": "sg-xxxxxxxxxxxxxxxxx"
+        }
+      ],
+      "Ipv6Addresses": [
+
+      ],
+      "MacAddress": "xx:xx:xx:xx:xx:xx",
+      "NetworkInterfaceId": "eni-xxxxxxxxxxxxxxxxx",
+      "OwnerId": "245582572290",
+      "PrivateDnsName": "ip-xxx-xxx-xxx-xxx.xx-xxxx-x.compute.internal",
+      "PrivateIpAddress": "xxx.xxx.xxx.xxx",
+      "PrivateIpAddresses": [
+        {
+          "Primary": "True",
+          "PrivateDnsName": "ip-xxx-xxx-xxx-xxx.xx-xxxx-x.compute.internal",
+          "PrivateIpAddress": "xxx.xxx.xxx.xxx"
+        }
+      ],
+      "SourceDestCheck": "True",
+      "Status": "in-use",
+      "SubnetId": "subnet-xxxxxxxx",
+      "VpcId": "vpc-xxxxxxxx",
+      "InterfaceType": "interface"
+    }
+  ],
+  "RootDeviceName": "/dev/sda1",
+  "RootDeviceType": "ebs",
+  "SecurityGroups": [
+    {
+      "GroupName": "xxxxxxxxx_ssh",
+      "GroupId": "sg-xxxxxxxxxxxxxxxxx"
+    }
+  ],
+  "SourceDestCheck": "True",
+  "StateReason": {
+    "Code": "Client.UserInitiatedShutdown",
+    "Message": "Client.UserInitiatedShutdown: User initiated shutdown"
+  },
+  "Tags": [
+    {
+      "Key": "Name",
+      "Value": "xxxxxxxxx-test-instance"
+    },
+    {
+      "Key": "TerminationDate",
+      "Value": "2021-04"
+    }
+  ],
+  "VirtualizationType": "hvm",
+  "CpuOptions": {
+    "CoreCount": 1,
+    "ThreadsPerCore": 1
+  },
+  "CapacityReservationSpecification": {
+    "CapacityReservationPreference": "open"
+  },
+  "HibernationOptions": {
+    "Configured": "False"
+  },
+  "MetadataOptions": {
+    "State": "applied",
+    "HttpTokens": "optional",
+    "HttpPutResponseHopLimit": 1,
+    "HttpEndpoint": "enabled"
+  },
+  "EnclaveOptions": {
+    "Enabled": "False"
+  }
+}

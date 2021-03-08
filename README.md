@@ -3,6 +3,12 @@
 This CloudFormation template creates Lambda function for scheduled terminating EC2 instances in the "stopped" state for
 more than 30 days and for notifying in 7, 2, 1 days before termination via email with a warning message.
 
+* Testing python lambda:
+
+```
+bash stack_mngmt.sh test_python
+```
+
 * Deployment of CloudFormation stack:
 
 ```
