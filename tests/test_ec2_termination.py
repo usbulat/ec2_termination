@@ -55,19 +55,19 @@ def test_get_termination_tag():
 
 def test_get_wrong_termination_tag():
     response = get_termination_tag(instance = instance_wrong)
-    assert response == None
+    assert not response
 
 
 def test_get_empty_termination_tag():
     response = get_termination_tag(instance = instance_empty)
-    assert response == None
+    assert not response
 
 
 def test_get_tag_action_stopped_1():
     response = get_tag_action(instance_state   = "stopped",
                               termination_tag  = date(2021, 4, 7),
                               termination_attr = date(2021, 4, 7))
-    assert response == None
+    assert not response
 
 
 def test_get_tag_action_stopped_2():
@@ -81,7 +81,7 @@ def test_get_tag_action_stopped_3():
     response = get_tag_action(instance_state   = "stopped",
                               termination_tag  = date(2021, 4, 8),
                               termination_attr = date(2021, 4, 7))
-    assert response == None
+    assert not response
 
 
 def test_get_tag_action_stopped_4():
@@ -102,7 +102,7 @@ def test_get_tag_action_stopped_6():
     response = get_tag_action(instance_state   = "stopped",
                               termination_tag  = date(2021, 4, 7),
                               termination_attr = None)
-    assert response == None
+    assert not response
 
 
 def test_get_tag_action_other_1():
@@ -130,14 +130,14 @@ def test_get_tag_action_other_4():
     response = get_tag_action(instance_state   = "other",
                               termination_tag  = None,
                               termination_attr = date(2021, 4, 7))
-    assert response == None
+    assert not response
 
 
 def test_get_tag_action_other_5():
     response = get_tag_action(instance_state   = "other",
                               termination_tag  = None,
                               termination_attr = None)
-    assert response == None
+    assert not response
 
 
 def test_get_tag_action_other_6():
