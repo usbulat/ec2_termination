@@ -3,6 +3,14 @@ Description: >
   This CloudFormation template creates Lambda function for terminating EC2 instances in the "stopped" state for more than 30 days
   and for notifying in 7, 2, 1 days before termination via email with a warning message.
 
+Parameters:
+  SubscriberEmail:
+    Type: String
+    Default: AWS::NoValue
+
+Conditions:
+  CreateSubscription: !Not [ !Equals [ AWS::NoValue, !Ref SubscriberEmail ] ]
+
 Resources:
   # Scheduled rule for triggering ec2_termination_lambda_function every day at 10:00am
   ScheduledRule:
@@ -40,11 +48,12 @@ Resources:
 
   # Subscription example
   EmailSubscription:
+    Condition: CreateSubscription
     Type: AWS::SNS::Subscription
     Properties:
-      Endpoint: byusupov@provectus.com
+      Endpoint: !Ref SubscriberEmail
       Protocol: email
-      TopicArn: !Ref 'EmailSNSTopic'
+      TopicArn: !Ref EmailSNSTopic
 
   # IAM role for ec2_termination_lambda_function function
   LambdaFunctionRole:
@@ -84,15 +93,14 @@ Resources:
                 Resource: '*'
                 Effect: Allow
                 Condition:
-                  ForAllValues:StringEquals:
-                    'ec2:ResourceTag': TerminationDate
-                    #TODO check this!!!!!!!!!
+                  StringLike:
+                    'ec2:ResourceTag/TerminationDate': '?*-?*-?*'
 
   # CloudWatch log group for ec2_termination_lambda_function function
   LambdaFunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Join ['/', ['/aws/lambda', !Ref LambdaFunction]]
+      LogGroupName: !Join [ '/', [ '/aws/lambda', !Ref LambdaFunction ] ]
       RetentionInDays: 14
 
   # Lambda function for scheduled EC2 instances termination
@@ -110,7 +118,7 @@ Resources:
           - Arn
       Environment:
         Variables:
-          SNS_TOPIC_ARN: !Ref 'EmailSNSTopic'
+          SNS_TOPIC_ARN: !Ref EmailSNSTopic
           DAYS_DELTA: 30
       Code:
         ZipFile: |
