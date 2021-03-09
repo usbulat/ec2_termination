@@ -64,10 +64,14 @@ def get_topic_arn():
 
 
 def get_termination_attr(instance, days_delta):
-    stopped_reason   = instance['StateTransitionReason']
-    stopped_date_re  = re.findall(date_regex, stopped_reason)[0]
-    stopped_date     = datetime.strptime(stopped_date_re, date_format).date()
-    termination_attr = stopped_date + days_delta
+    termination_attr = None
+    try:
+        stopped_reason   = instance['StateTransitionReason']
+        stopped_date_re  = re.findall(date_regex, stopped_reason)[0]
+        stopped_date     = datetime.strptime(stopped_date_re, date_format).date()
+        termination_attr = stopped_date + days_delta
+    except (IndexError, TypeError):
+        pass
     return termination_attr
 
 

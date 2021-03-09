@@ -23,7 +23,7 @@
     "Code": 80,
     "Name": "stopped"
   },
-  "StateTransitionReason": "User initiated (2021-03-08 12:44:38 GMT)",
+  "StateTransitionReason": "",
   "SubnetId": "subnet-xxxxxxxx",
   "VpcId": "vpc-xxxxxxxx",
   "Architecture": "x86_64",

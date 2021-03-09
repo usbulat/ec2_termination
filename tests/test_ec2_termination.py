@@ -48,6 +48,18 @@ def test_get_termination_attr():
     assert response == date(2021, 4, 7)
 
 
+def test_get_wrong_termination_attr():
+    response = get_termination_attr(instance = instance_wrong,
+                                    days_delta = timedelta(days = 30))
+    assert not response
+
+
+def test_get_empty_termination_attr():
+    response = get_termination_attr(instance = instance_empty,
+                                    days_delta = timedelta(days = 30))
+    assert not response
+
+
 def test_get_termination_tag():
     response = get_termination_tag(instance = instance)
     assert response == date(2021, 4, 7)
