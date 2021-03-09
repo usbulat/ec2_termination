@@ -188,6 +188,11 @@ def test_get_days_left():
     assert response == 2
 
 
+def test_get_days_left_empty():
+    response = get_days_left(current_date = date(2021, 3, 8), termination_date = None)
+    assert not response
+
+
 def test_get_instance_action_1day():
     response = get_instance_action(days_left = 1)
     assert response == "email"

@@ -118,7 +118,7 @@ def get_instance_action(days_left):
     instance_action = None
     if days_left == 1 or days_left == 2 or days_left == 7:
         instance_action = "email"
-    elif days_left <= 0:
+    elif days_left is not None and days_left <= 0:
         instance_action = "terminate"
     return instance_action
 
